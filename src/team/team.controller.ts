@@ -10,9 +10,4 @@ export class TeamController {
   addTeam(@Body() addTeamDto: addTeamDto) {
     return this.TeamService.addTeam(addTeamDto);
   }
-
-  @Post('generatePayersObject')
-  generatePayersObject(@Body() addTeamDto: addTeamDto) {
-    return this.TeamService.generatePayersObject(addTeamDto);
-  }
 }

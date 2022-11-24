@@ -24,18 +24,18 @@ export class TeamService {
       const team = new this.TeamModel(addTeamDto);
       await team.save();
 
-      await this.filter(addTeamDto);
-
       return team;
     } catch (error) {
       console.log(error);
     }
   }
 
-  async filter(dto: addTeamDto) {}
-
-  async generatePayersObject(addTeamDto: addTeamDto) {
-    const defenders = addTeamDto.formation[0];
-    return new Array(defenders);
-  }
+  // async addPlayerToTeam(team_id: string, player_id: string, player_position: string) {
+  //   const findteam = await this.TeamModel.findById(Team.id);
+  // }
 }
+
+// async generatePayersObject(addTeamDto: addTeamDto) {
+//   const defenders = addTeamDto.formation[0];
+//   return new Array(defenders);
+// }

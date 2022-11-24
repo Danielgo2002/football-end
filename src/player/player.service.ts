@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { addPlayerDto } from 'src/dto/playerDto/addPlayer.Dto';
 import { addTeamDto } from 'src/dto/teamDto/addTeam.dto';
 import { Player, PlayerDocument } from 'src/schemas/playerSchema';
 import { Team, TeamDocument } from 'src/schemas/teamSchema';
-
+import { position } from 'src/playerEnum';
 @Injectable()
 export class PlayerService {
   constructor(
@@ -23,6 +23,8 @@ export class PlayerService {
       }
 
       const Player = new this.PlayerModel(addPlayerDto);
+
+      this.addPlayerToTeam(addPlayerDto.team_id, Player._id, Player.position);
       await Player.save();
 
       return Player;
@@ -30,11 +32,53 @@ export class PlayerService {
       console.log(error);
     }
   }
-  async addPlayerToTeam(addPlayerDto: addPlayerDto, addTeamDto: addTeamDto) {
-    const findteam = await this.TeamModel.findOne();
+  async addPlayerToTeam(
+    team_id: string,
+    player_id: any,
+    player_position: string,
+  ) {
+    try {
+      const findteam = await this.TeamModel.findById(team_id);
+      if (!findteam) {
+        return 'error';
+      }
+      if (player_position === position.DEFENDER) {
+        const formationLength = parseInt(findteam.formation[0]); // 4
+
+        if (findteam.defenders.length <= formationLength - 1) {
+          findteam.defenders.push(player_id);
+          await findteam.save();
+        } else {
+          throw new ForbiddenException('defenders full');
+        }
+      } else if (player_position === position.MIDFIELDER) {
+        const formationLength = parseInt(findteam.formation[1]);
+
+        if (findteam.midfielders.length <= formationLength - 1) {
+          findteam.midfielders.push(player_id);
+          await findteam.save();
+        } else {
+          throw new ForbiddenException('midfielders full');
+        }
+      } else if (player_position === position.FORWARD) {
+        const formationLength = parseInt(findteam.formation[2]);
+
+        if (findteam.Forwards.length === formationLength - 1) {
+          findteam.Forwards.push(player_id);
+          await findteam.save();
+        } else {
+          throw new ForbiddenException('forwards full');
+        }
+      } else if (player_position === position.GOALKEEPER) {
+        const formationLength = parseInt(findteam.formation[3]);
+
+        if (findteam.goalkeeper.length <= formationLength - 1) {
+          findteam.goalkeeper.push(player_id);
+          await findteam.save();
+        } else {
+          throw new ForbiddenException('goalkeeper full');
+        }
+      }
+    } catch (err) {}
   }
 }
-
-// const addPlayerToTeeam = await this.TeamModel.findOne({player: addPlayerDto.position})
-// if(addPlayerDto.position == "defender"){
-//   addPlayerToTeeam.defenders.push(Player.position)

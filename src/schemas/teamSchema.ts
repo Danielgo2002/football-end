@@ -18,6 +18,9 @@ export class Team {
   midfielders: PlayerDocument[];
 
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }] })
-  Atackers: PlayerDocument[];
+  Forwards: PlayerDocument[];
+
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }] })
+  goalkeeper: PlayerDocument[];
 }
 export const TeamSchema = SchemaFactory.createForClass(Team);

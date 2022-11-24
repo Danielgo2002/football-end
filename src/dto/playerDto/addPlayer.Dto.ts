@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { position } from 'src/playerEnum';
 import { Player } from 'src/schemas/playerSchema';
-import { position } from './playerEnum';
 
 export class addPlayerDto {
   @IsNotEmpty()
