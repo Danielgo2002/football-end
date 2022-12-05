@@ -1,58 +1,73 @@
 import { Injectable } from '@nestjs/common';
+import { signinDto, signupDto } from 'src/dto/authdto';
+import * as argon from 'argon2';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { AccountDocument } from 'src/schemas/account.schema';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
-import * as argon from 'argon2';
-import { Model } from 'mongoose';
-import { signupDto } from 'src/dto/authDto/signupDto';
-import { AdminDocument } from 'src/schemas/adminSchema';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel('Admin') private readonly AdminModel: Model<AdminDocument>,
+    @InjectModel('Account')
+    private readonly AccountModel: Model<AccountDocument>,
     private config: ConfigService,
     private jwt: JwtService,
   ) {}
-
   async signup(signupDto: signupDto) {
     try {
-      const existAdmin = await this.AdminModel.findOne({
-        name: signupDto.name,
+      const exsistuser = await this.AccountModel.findOne({
+        email: signupDto.email,
       });
-      if (existAdmin) {
-        return 'dupllicate error';
+      if (exsistuser) {
+        return 'duplicate error';
       }
 
       signupDto.hash = await argon.hash(signupDto.password);
       delete signupDto.password;
-      const user = new this.AdminModel(signupDto);
-      await user.save();
-      const admin_access_Token = await (
-        await this.AdminsignToken(user.id, user.gmail)
-      ).Admin_access_token;
-      const admin_refresh_Token = await (
-        await this.Admin_refresh_Tokens(user.id, user.gmail)
-      ).Admin_refresh_Token;
-      return {
-        admin_access_Token,
+      delete signupDto.hash;
+      const user = await new this.AccountModel(signupDto);
 
-        admin_refresh_Token,
+      await user.save();
+
+      const access_Token = await (
+        await this.signToken(user.email)
+      ).access_token;
+      const refresh_token = await (
+        await this.refreshToken(user.email)
+      ).refresh_token;
+
+      return {
+        access_Token,
+
+        refresh_token,
       };
-    } catch (error) {
-      console.log(error);
-    }
+    } catch {}
   }
 
-  async AdminsignToken(
-    userid: string,
-    email: string,
-  ): Promise<{ Admin_access_token: string }> {
-    const payload = {
-      sub: userid,
-      email,
+  async signin(signinDto: signinDto) {
+    const user = await this.AccountModel.findOne({ email: signinDto.email });
+    if (!user) {
+      return 'user not found';
+    }
+    const access_Token = await (await this.signToken(user.email)).access_token;
+    const refresh_token = await (
+      await this.refreshToken(user.email)
+    ).refresh_token;
+
+    return {
+      access_Token,
+
+      refresh_token,
     };
-    const secret = this.config.get('AccessADMIN_SECRET');
+  }
+
+  async signToken(email: string): Promise<{ access_token: string }> {
+    const payload = {
+      sub: email,
+    };
+    const secret = this.config.get('JWT_SECRET');
 
     const token = await this.jwt.signAsync(payload, {
       expiresIn: '15m',
@@ -60,34 +75,20 @@ export class AuthService {
     });
 
     return {
-      Admin_access_token: token,
+      access_token: token,
     };
   }
 
-  async Admin_refresh_Tokens(
-    userid: string,
-    email: string,
-  ): Promise<{ Admin_refresh_Token: string }> {
+  async refreshToken(email: string): Promise<{ refresh_token: string }> {
     const payload = {
-      sub: userid,
-      email,
+      sub: email,
     };
-    const secret = this.config.get('REFADMIN_SECRET');
+    const secret = this.config.get('JWT_SECRET_REFRESH');
 
     const token = await this.jwt.signAsync(payload, {
-      expiresIn: '1d',
+      expiresIn: '15m',
       secret: secret,
     });
-    return {
-      Admin_refresh_Token: token,
-    };
-  }
-
-  async Admin_refresh(account) {
-    const Admin_access_Token = await this.AdminsignToken(
-      account._id,
-      account.email,
-    );
-    return Admin_access_Token;
+    return { refresh_token: token };
   }
 }
